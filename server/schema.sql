@@ -30,7 +30,8 @@ CREATE TABLE Messages (
 CREATE TABLE Users (
   id INTEGER NOT NULL AUTO_INCREMENT,
   username VARCHAR(255),
-  PRIMARY KEY (id)
+  PRIMARY KEY (id),
+  UNIQUE (username)
 );
 
 -- ---
@@ -41,8 +42,9 @@ CREATE TABLE Users (
     
 CREATE TABLE Rooms (
   id INTEGER NOT NULL AUTO_INCREMENT,
-  name VARCHAR(255),
-  PRIMARY KEY (id)
+  roomname VARCHAR(255),
+  PRIMARY KEY (id),
+  UNIQUE (roomname)
 );
 
 -- ---

@@ -1,6 +1,7 @@
 /* You'll need to have MySQL running and your Node server running
  * for these tests to pass. */
 
+var Promise = require('bluebird');
 var mysql = require('mysql');
 var request = require('request'); // You might need to npm install the request module!
 var expect = require('chai').expect;
@@ -12,16 +13,25 @@ describe('Persistent Node Chat Server', function() {
     dbConnection = mysql.createConnection({
       user: 'student',
       password: 'student',
-      database: 'chat'
+      database: 'chat',
+      multipleStatements: true
     });
     dbConnection.connect();
+    Promise.promisifyAll(dbConnection);
 
     var tablenames = ['Messages', 'Users', 'Rooms']; // TODO: fill this out
 
     /* Empty the db table before each test so that multiple tests
      * (or repeated runs of the tests) won't screw each other up: */
 
-    dbConnection.query(tablenames.map(tablename => `TRUNCATE ${tablename};`).join(' '), done);
+    dbConnection.queryAsync('TRUNCATE Messages;')
+    .then(() => {
+      return dbConnection.queryAsync('DELETE FROM Users;');
+    })
+    .then(() => {
+      return dbConnection.queryAsync('DELETE FROM Rooms;');
+    })
+    .then(() => done());
 
   });
 
@@ -42,7 +52,7 @@ describe('Persistent Node Chat Server', function() {
         uri: 'http://127.0.0.1:3000/classes/messages',
         json: {
           username: 'Valjean',
-          message: 'In mercy\'s name, three days is all I need.',
+          text: 'In mercy\'s name, three days is all I need.',
           roomname: 'Hello'
         }
       }, function () {
@@ -69,9 +79,10 @@ describe('Persistent Node Chat Server', function() {
 
   it('Should output all messages from the DB', function(done) {
     // Let's insert a message into the db
-    var queryString = 'INSERT INTO Rooms (name) VALUES (?);' +
-                      'INSERT INTO Messages (text, id_Rooms) VALUES (?, (SELECT id FROM Rooms WHERE name=" ? "))';
-    var queryArgs = ['main', 'Men like you can never change!', 'main'];
+    var queryString = 'INSERT INTO Rooms (roomname) VALUES (?);' +
+                      'INSERT INTO Users (username) VALUES (?);' +
+                      'INSERT INTO Messages (text, id_Rooms, id_Users) VALUES (?, (SELECT id FROM Rooms WHERE roomname = ? ), (SELECT id FROM Users WHERE username = ? ))';
+    var queryArgs = ['main', 'some guy', 'Men like you can never change!', 'main', 'some guy'];
     // TODO - The exact query string and query args to use
     // here depend on the schema you design, so I'll leave
     // them up to you. */
@@ -83,6 +94,7 @@ describe('Persistent Node Chat Server', function() {
       // the message we just inserted:
       request('http://127.0.0.1:3000/classes/messages', function(error, response, body) {
         var messageLog = JSON.parse(body);
+        console.log(messageLog);
         expect(messageLog[0].text).to.equal('Men like you can never change!');
         expect(messageLog[0].roomname).to.equal('main');
         done();
