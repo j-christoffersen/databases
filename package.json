@@ -17,10 +17,12 @@
     "lint": "eslint ./"
   },
   "dependencies": {
+    "bluebird": "^3.5.1",
     "body-parser": "^1.9.2",
     "express": "^4.10.1",
+    "jquery": "^3.2.1",
     "morgan": "^1.4.1",
-    "mysql": "^2.4.2",
+    "mysql": "^2.15.0",
     "request": "^2.69.0",
     "sequelize": "^3.21.0"
   },

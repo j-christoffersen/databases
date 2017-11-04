@@ -1,8 +1,11 @@
-var db = require('../db');
+var Promise = require('bluebird');
+var db = Promise.promisifyAll(require('../db'));
 
 module.exports = {
   messages: {
-    get: function () {}, // a function which produces all the messages
+    get: function () {
+      return db.queryAsync('SELECT * FROM Messages');
+    }, // a function which produces all the messages
     post: function () {} // a function which can be used to insert a message into the database
   },
 
