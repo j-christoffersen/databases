@@ -11,6 +11,10 @@ router.get('/users', controller.users.get);
 
 router.post('/users', controller.users.post);
 
+router.get('/rooms', controller.rooms.get);
+
+router.post('/rooms', controller.rooms.post);
+
 
 module.exports = router;
 

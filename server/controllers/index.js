@@ -11,13 +11,14 @@ var headers = {
 module.exports = {
   messages: {
     get: function (req, res) {
-      models.messages.get()
+      models.messages.get(req.query)
       .then(function(value) {
         res.writeHead(200, headers);
         res.end(JSON.stringify(value));
       });
     }, // a function which handles a get request for all messages
     post: function (req, res) {
+      console.log(req.body);
       models.messages.post(req.body)
       .then(function(value) {
         res.writeHead(201, headers);
@@ -28,12 +29,36 @@ module.exports = {
 
   users: {
     // Ditto as above
-    get: function (req, res) {},
+    get: function (req, res) {
+      models.users.get(req.query)
+      .then(function(value) {
+        res.writeHead(200, headers);
+        res.end(JSON.stringify(value));
+      });
+    },
     post: function (req, res) {
       models.users.post(req.body)
       .then(function(value) {
         res.writeHead(201, headers);
-        res.end(JSON.stringify(value[0]));
+        res.end(JSON.stringify(value));
+      });
+    }
+  },
+  
+  rooms: {
+    // Ditto as above
+    get: function (req, res) {
+      models.rooms.get(req.query)
+      .then(function(value) {
+        res.writeHead(200, headers);
+        res.end(JSON.stringify(value));
+      });
+    },
+    post: function (req, res) {
+      models.rooms.post(req.body)
+      .then(function(value) {
+        res.writeHead(201, headers);
+        res.end(JSON.stringify(value));
       });
     }
   }

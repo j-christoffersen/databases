@@ -4,15 +4,64 @@ var app = {
   //TODO: The current 'handleUsernameClick' function just toggles the class 'friend'
   //to all messages sent by the user
   server: 'http://localhost:3000/classes/messages',
+  usernameServer: 'http://localhost:3000/classes/users',
+  roomnameServer: 'http://localhost:3000/classes/rooms',
   username: 'anonymous',
+  userId: 0,
   roomname: 'lobby',
+  roomId: 0,
   lastMessageId: 0,
   friends: {},
   messages: [],
+  rooms: [],
 
   init: function() {
     // Get username
     app.username = window.location.search.substr(10);
+    
+    //Get the user id
+    $.ajax({
+      url: app.usernameServer,
+      type: 'POST',
+      data: JSON.stringify({username: app.username}),
+      contentType: 'application/json',
+      success: function(data) {
+        if (data.insertId) {
+          app.userId = data.insertId;
+        } else {
+          $.ajax({
+            url: app.usernameServer,
+            type: 'GET',
+            data: {username: app.username},
+            contentType: 'application/json',
+            success: function(data) {
+              app.userId = data[0].id;
+            },
+            error: function(error) {
+              console.log('could not get user', error);
+            }
+          });
+        }
+      },
+      error: function(error) {
+        console.log('could not post user', error);
+      }
+    });
+    
+    //Get the rooms
+    $.ajax({
+      url: app.roomnameServer,
+      type: 'GET',
+      contentType: 'application/json',
+      success: function(data) {
+        app.rooms = data.map(room => room.roomname);
+        app.renderRoomList();
+        console.log(app.rooms);
+      },
+      error: function(error) {
+        console.log('could not get rooms', error);
+      }
+    });
 
     // Cache jQuery selectors
     app.$message = $('#message');
@@ -62,7 +111,7 @@ var app = {
     $.ajax({
       url: app.server,
       type: 'GET',
-      // data: { order: '-createdAt' },
+      data: { roomId: app.roomId },
       contentType: 'application/json',
       success: function(data) {
         // Don't bother if we have nothing to work with
@@ -75,8 +124,6 @@ var app = {
 
         // Only bother updating the DOM if we have a new message
         if ( true /* mostRecentMessage.objectId !== app.lastMessageId */ ) {
-          // Update the UI with the fetched rooms
-          app.renderRoomList(data);
 
           // Update the UI with the fetched messages
           app.renderMessages(data, animate);
@@ -119,19 +166,7 @@ var app = {
   renderRoomList: function(messages) {
     app.$roomSelect.html('<option value="__newRoom">New room...</option>');
 
-    if (messages) {
-      var rooms = {};
-      messages.forEach(function(message) {
-        var roomname = message.roomname;
-        if (roomname && !rooms[roomname]) {
-          // Add the room to the select menu
-          app.renderRoom(roomname);
-
-          // Store that we've added this room already
-          rooms[roomname] = true;
-        }
-      });
-    }
+    app.rooms.forEach(roomname => app.renderRoom(roomname));
 
     // Select the menu option
     app.$roomSelect.val(app.roomname);
@@ -198,17 +233,51 @@ var app = {
       if (roomname) {
         // Set as the current room
         app.roomname = roomname;
-
-        // Add the room to the menu
-        app.renderRoom(roomname);
-
-        // Select the menu option
-        app.$roomSelect.val(roomname);
+        
+        $.ajax({
+          url: app.roomnameServer,
+          type: 'POST',
+          data: JSON.stringify({roomname: app.roomname}),
+          contentType: 'application/json',
+          success: function(data) {
+            if (data.insertId) {
+              app.roomId = data.insertId;
+              app.fetch();
+              // Add the room to the menu
+              app.rooms.push(roomname);
+              app.renderRoom(roomname);
+              // Select the menu option
+              app.$roomSelect.val(roomname);
+            } else {
+              alert('Room already exists!');
+              // Select the menu option
+              app.$roomSelect.val(roomname);
+              app.handleRoomChange();
+            }
+          },
+          error: function(error) {
+            console.log('could not post room', error);
+          }
+        });
+        
       }
     } else {
       app.startSpinner();
       // Store as undefined for empty names
       app.roomname = app.$roomSelect.val();
+      $.ajax({
+        url: app.roomnameServer,
+        type: 'GET',
+        data: {roomname: app.roomname},
+        contentType: 'application/json',
+        success: function(data) {
+          app.roomId = data[0].id;
+          app.fetch();
+        },
+        error: function(error) {
+          console.log('could not get room', error);
+        }
+      });
     }
     // Rerender messages
     app.renderMessages(app.messages);
@@ -216,9 +285,9 @@ var app = {
 
   handleSubmit: function(event) {
     var message = {
-      username: app.username,
       text: app.$message.val(),
-      roomname: app.roomname || 'lobby'
+      userId: app.userId,
+      roomId: app.roomId || 1
     };
 
     app.send(message);
